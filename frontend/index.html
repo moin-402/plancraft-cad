@@ -7,19 +7,47 @@
   <link rel="stylesheet" href="css/theme.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/draw.css">
+  <link rel="stylesheet" href="css/menu.css">
 </head>
 <body>
 
   <header id="menubar">
     <span class="brand">PlanCraft CAD</span>
     <nav>
-      <button class="menu-item">File</button>
-      <button class="menu-item">Edit</button>
-      <button class="menu-item">View</button>
+      <div class="menu">
+        <button class="menu-item">File</button>
+        <div class="dropdown" hidden>
+          <button class="dropdown-item" data-action="new">New project</button>
+          <button class="dropdown-item" data-action="open">Open… <span class="shortcut">Ctrl+O</span></button>
+          <div class="dropdown-separator"></div>
+          <button class="dropdown-item" data-action="save">Save <span class="shortcut">Ctrl+S</span></button>
+          <button class="dropdown-item" data-action="saveAs">Save as… <span class="shortcut">Ctrl+Shift+S</span></button>
+        </div>
+      </div>
+
+      <div class="menu">
+        <button class="menu-item">Edit</button>
+        <div class="dropdown" hidden>
+          <button class="dropdown-item" data-action="undo">Undo <span class="shortcut">Ctrl+Z</span></button>
+          <button class="dropdown-item" data-action="redo">Redo <span class="shortcut">Ctrl+Y</span></button>
+          <div class="dropdown-separator"></div>
+          <button class="dropdown-item" data-action="selectAll">Select all <span class="shortcut">Ctrl+A</span></button>
+          <button class="dropdown-item" data-action="delete">Delete <span class="shortcut">Del</span></button>
+        </div>
+      </div>
+
+      <div class="menu">
+        <button class="menu-item">View</button>
+        <div class="dropdown" hidden>
+          <button class="dropdown-item" data-action="zoomFit">Zoom to fit <span class="shortcut">Home</span></button>
+        </div>
+      </div>
+
       <button class="menu-item">Draw</button>
       <button class="menu-item">Tools</button>
       <button class="menu-item">Settings</button>
     </nav>
+    <span id="project-title" class="project-title">Untitled</span>
   </header>
 
   <aside id="toolbar">

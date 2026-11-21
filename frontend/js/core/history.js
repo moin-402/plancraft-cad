@@ -30,3 +30,10 @@ export function redo() {
   setEntities(clone(current));
   return true;
 }
+
+// Forget all history (used after New or Open).
+export function reset() {
+  undoStack.length = 0;
+  redoStack.length = 0;
+  current = clone(getEntities());
+}

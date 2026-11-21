@@ -57,3 +57,10 @@ export function setEntities(list) {
   entities = list;
   notify();
 }
+
+// Used when opening a project: replace everything. Every object must have an id.
+export function loadEntities(list) {
+  entities = list.map(toIntegerMm);
+  nextId = entities.reduce((highest, e) => Math.max(highest, e.id), 0) + 1;
+  notify();
+}
