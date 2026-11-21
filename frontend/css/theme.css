@@ -1,0 +1,18 @@
+:root {
+  --bg-chrome: #2b2f36;
+  --bg-panel: #f3f4f6;
+  --border: #c9ced6;
+  --text: #1f2430;
+  --text-muted: #6b7280;
+  --text-on-dark: #e8eaed;
+  --accent: #2563eb;
+
+  --canvas-bg: #ffffff;
+  --canvas-bg-with-paper: #dfe3e8;
+  --grid-minor: #e3e6ea;
+  --grid-major: #c3c9d2;
+  --axis-x: #d9534f;
+  --axis-y: #3c9d5a;
+
+  --font: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+}

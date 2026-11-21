@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlanCraft CAD</title>
+  <link rel="stylesheet" href="css/theme.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/draw.css">
+</head>
+<body>
+
+  <header id="menubar">
+    <span class="brand">PlanCraft CAD</span>
+    <nav>
+      <button class="menu-item">File</button>
+      <button class="menu-item">Edit</button>
+      <button class="menu-item">View</button>
+      <button class="menu-item">Draw</button>
+      <button class="menu-item">Tools</button>
+      <button class="menu-item">Settings</button>
+    </nav>
+  </header>
+
+  <aside id="toolbar">
+    <button class="tool active" data-tool="select">Select</button>
+    <button class="tool" data-tool="line">Line</button>
+    <button class="tool" data-tool="rectangle">Rect</button>
+    <button class="tool" data-tool="wall">Wall</button>
+    <button class="tool" data-tool="door">Door</button>
+    <button class="tool" data-tool="window">Window</button>
+    <button class="tool" data-tool="dimension">Dim</button>
+    <button class="tool" data-tool="text">Text</button>
+  </aside>
+
+  <main id="workspace">
+    <svg id="canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+
+    <div id="draw-hud" hidden>
+      <span id="hud-info"></span>
+      <input id="length-input" type="text" autocomplete="off" spellcheck="false"
+             placeholder="Type length, Enter">
+      <span class="hud-hint">12'6" · 12 6 · 10 (feet) · 3500mm · Shift = straight · Esc = stop</span>
+    </div>
+  </main>
+
+  <aside id="properties">
+    <h2>Properties</h2>
+    <p class="muted">Nothing selected.</p>
+    <h3>Drawing</h3>
+    <dl>
+      <dt>Units</dt><dd>Feet &amp; inches</dd>
+      <dt>Stored as</dt><dd>Millimetres</dd>
+      <dt>Print scale</dt><dd>1 : 100</dd>
+    </dl>
+  </aside>
+
+  <footer id="statusbar">
+    <span id="status-cursor">X: 0' 0"   Y: 0' 0"</span>
+    <span id="status-cursor-mm" class="muted"></span>
+    <span class="spacer"></span>
+    <label>Paper
+      <select id="paper-select">
+        <option value="freeform">Freeform</option>
+        <option value="A4">A4</option>
+        <option value="A3">A3</option>
+        <option value="A2">A2</option>
+        <option value="A1">A1</option>
+      </select>
+    </label>
+    <span>Unit: ft-in</span>
+    <span id="status-grid">Grid: -</span>
+    <span id="status-zoom">Zoom: -</span>
+  </footer>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
