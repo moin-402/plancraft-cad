@@ -21,7 +21,9 @@ export function createLineTool(ctx) {
   // Update the dashed preview line, the snap marker and the length readout.
   function refresh() {
     ctx.setOverlay({
-      preview: start && end ? { x1: start.x, y1: start.y, x2: end.x, y2: end.y } : null,
+      preview: start && end
+        ? { type: "line", x1: start.x, y1: start.y, x2: end.x, y2: end.y }
+        : null,
       snap: end ? { x: end.x, y: end.y, kind: end.kind } : null,
     });
     if (start && end) {

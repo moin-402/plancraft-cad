@@ -1,25 +1,33 @@
 [hidden] { display: none !important; }
 
 #canvas.drawing { cursor: crosshair; }
+#canvas.tool-select { cursor: default; }
 #canvas.panning { cursor: grabbing; }
 
-.entity-line {
+/* Drawing objects */
+.entity {
   stroke: #111827;
   stroke-width: 1.5;
   fill: none;
   stroke-linecap: round;
   pointer-events: none;
 }
-.preview-line {
+.entity.hover { stroke: #60a5fa; stroke-width: 2.5; }
+.entity.selected { stroke: #2563eb; stroke-width: 2.5; }
+
+.preview-shape {
   stroke: #2563eb;
   stroke-width: 1.5;
   stroke-dasharray: 6 4;
+  fill: none;
   pointer-events: none;
 }
+
 .snap-marker { fill: none; stroke-width: 1.5; pointer-events: none; }
 .snap-endpoint { stroke: #16a34a; }
 .snap-grid, .snap-typed { stroke: #2563eb; }
 
+/* Length / size input bar */
 #draw-hud {
   position: absolute;
   left: 50%;
@@ -37,7 +45,7 @@
   white-space: nowrap;
 }
 #draw-hud input {
-  width: 150px;
+  width: 170px;
   padding: 4px 6px;
   font: inherit;
   border: 1px solid #6b7280;
@@ -45,3 +53,6 @@
 }
 #draw-hud input.error { border-color: #ef4444; outline: 2px solid #ef4444; }
 .hud-hint { color: #9aa1ad; font-size: 11px; }
+
+/* Properties panel */
+.prop-title { font-weight: 600; font-size: 14px; margin-bottom: 8px; }

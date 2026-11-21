@@ -2,11 +2,17 @@ import { Viewport } from "./render/viewport.js";
 import { createScene } from "./render/scene.js";
 import { chooseGridStep } from "./render/grid.js";
 import { paperWorldSize } from "./core/paper.js";
-import { getEntities, subscribe } from "./core/store.js";
-import { undo, redo } from "./core/history.js";
+import { getEntities, subscribe, updateEntities, removeEntities } from "./core/store.js";
+import { undo, redo, commit } from "./core/history.js";
 import { snapPoint } from "./core/snap.js";
+import { moveEntity } from "./core/geometry.js";
+import * as selection from "./core/selection.js";
+import { createSelectTool } from "./tools/selectTool.js";
 import { createLineTool } from "./tools/lineTool.js";
+import { createRectTool } from "./tools/rectTool.js";
+import { createCircleTool } from "./tools/circleTool.js";
 import * as hud from "./ui/hud.js";
+import * as properties from "./ui/properties.js";
 import { showCursor, showGrid, showZoom } from "./ui/statusbar.js";
 
 const svg = document.getElementById("canvas");
@@ -18,18 +24,26 @@ let paperKey = "freeform";
 let overlay = { preview: null, snap: null };   // temporary drawing helpers
 
 function redraw() {
-  const { stepMm } = scene.render(viewport, paperKey, getEntities(), overlay);
+  const { stepMm } = scene.render(
+    viewport, paperKey, getEntities(), overlay, new Set(selection.getIds())
+  );
   showGrid(stepMm);
   showZoom(viewport.zoomPercent);
 }
 
-// Redraw whenever the drawing data changes (new line, undo, redo).
-subscribe(redraw);
+// Redraw and refresh the properties panel when the drawing or selection changes.
+function refreshAll() {
+  properties.render(selection.selectedEntities());
+  redraw();
+}
+subscribe(refreshAll);
+selection.onChange(refreshAll);
 
 // Things tools are allowed to use.
 const ctx = {
-  snap: (world) =>
-    snapPoint(world, viewport, getEntities(), chooseGridStep(viewport.scale).stepMm),
+  viewport,
+  snap: (world, exclude) =>
+    snapPoint(world, viewport, getEntities(), chooseGridStep(viewport.scale).stepMm, exclude),
   setOverlay: (next) => {
     overlay = next;
     redraw();
@@ -37,14 +51,20 @@ const ctx = {
 };
 
 // --- Tools ---
-// Tools not listed here (select, rectangle, wall...) are not built yet.
-const tools = { line: createLineTool(ctx) };
+// Tools not listed here (wall, door, window...) are not built yet.
+const tools = {
+  select: createSelectTool(ctx),
+  line: createLineTool(ctx),
+  rectangle: createRectTool(ctx),
+  circle: createCircleTool(ctx),
+};
 let activeTool = null;
 
 function chooseTool(name) {
   if (activeTool && activeTool.deactivate) activeTool.deactivate();
   activeTool = tools[name] || null;
-  svg.classList.toggle("drawing", Boolean(activeTool));
+  svg.classList.toggle("tool-select", name === "select");
+  svg.classList.toggle("drawing", Boolean(activeTool) && name !== "select");
 }
 
 document.querySelectorAll(".tool").forEach((btn) => {
@@ -71,29 +91,40 @@ function pointerPos(event) {
   return { x: event.clientX - rect.left, y: event.clientY - rect.top };
 }
 
-// --- Mouse: panning, drawing ---
+// --- Mouse: panning and tools ---
 let panning = false;
 let spaceDown = false;
 let last = { x: 0, y: 0 };
 
-// Stops the canvas click from stealing keyboard focus from the length box.
+function startPan(p, e) {
+  panning = true;
+  last = p;
+  svg.setPointerCapture(e.pointerId);
+  svg.classList.add("panning");
+  e.preventDefault();
+}
+
+function stopPan() {
+  panning = false;
+  svg.classList.remove("panning");
+}
+
+// Stops the canvas click from stealing keyboard focus from the input box.
 svg.addEventListener("mousedown", (e) => e.preventDefault());
 
 svg.addEventListener("pointerdown", (e) => {
   const p = pointerPos(e);
-  const wantsPan = e.button === 1 || (e.button === 0 && (!activeTool || spaceDown));
 
-  if (wantsPan) {
-    panning = true;
-    last = p;
-    svg.setPointerCapture(e.pointerId);
-    svg.classList.add("panning");
-    e.preventDefault();
+  // Pan: middle button, Space + left button, or left button with no tool.
+  if (e.button === 1 || (e.button === 0 && (!activeTool || spaceDown))) {
+    startPan(p, e);
     return;
   }
   if (e.button === 0 && activeTool) {
     const world = viewport.screenToWorld(p.x, p.y);
-    activeTool.pointerDown(world, e);
+    svg.setPointerCapture(e.pointerId);   // keeps drags working outside the canvas
+    // The select tool answers "pan" when you pressed on empty space.
+    if (activeTool.pointerDown(world, e) === "pan") startPan(p, e);
   }
 });
 
@@ -106,23 +137,29 @@ svg.addEventListener("pointermove", (e) => {
   }
   const world = viewport.screenToWorld(p.x, p.y);
   if (activeTool && !panning) {
-    const pt = activeTool.pointerMove(world, e);   // snapped point
+    const pt = activeTool.pointerMove(world, e);
     showCursor(pt.x, pt.y);
   } else {
     showCursor(world.x, world.y);
   }
 });
 
+svg.addEventListener("pointerup", (e) => {
+  if (panning) {
+    stopPan();
+    return;
+  }
+  if (activeTool && activeTool.pointerUp) {
+    const p = pointerPos(e);
+    activeTool.pointerUp(viewport.screenToWorld(p.x, p.y), e);
+  }
+});
+
+svg.addEventListener("pointercancel", stopPan);
+
 svg.addEventListener("pointerleave", () => {
   if (activeTool && activeTool.pointerLeave) activeTool.pointerLeave();
 });
-
-function stopPan() {
-  panning = false;
-  svg.classList.remove("panning");
-}
-svg.addEventListener("pointerup", stopPan);
-svg.addEventListener("pointercancel", stopPan);
 
 // Right-click stops the current drawing (and hides the browser menu).
 svg.addEventListener("contextmenu", (e) => {
@@ -158,6 +195,31 @@ document.addEventListener("keydown", (e) => {
     if (activeTool && activeTool.cancel) activeTool.cancel();
     return;
   }
+
+  // Delete the selected objects.
+  if ((e.key === "Delete" || e.key === "Backspace") && !typingInField(e)) {
+    const ids = selection.getIds();
+    if (ids.length > 0) {
+      e.preventDefault();
+      removeEntities(ids);
+      commit();
+    }
+    return;
+  }
+
+  // Arrow keys nudge the selection by one grid step.
+  if (e.key.startsWith("Arrow") && !typingInField(e)) {
+    const selected = selection.selectedEntities();
+    if (selected.length === 0) return;
+    e.preventDefault();
+    const step = Math.round(chooseGridStep(viewport.scale).stepMm);
+    const dx = e.key === "ArrowRight" ? step : e.key === "ArrowLeft" ? -step : 0;
+    const dy = e.key === "ArrowUp" ? step : e.key === "ArrowDown" ? -step : 0;
+    updateEntities(selected.map((obj) => moveEntity(obj, dx, dy)));
+    commit();
+    return;
+  }
+
   if (ctrl && key === "z" && !e.shiftKey) {
     e.preventDefault();
     if (activeTool && activeTool.cancel) activeTool.cancel();
@@ -184,5 +246,6 @@ paperSelect.addEventListener("change", () => {
   redraw();
 });
 
+chooseTool("select");   // Select is the default tool
 new ResizeObserver(resize).observe(svg);
 resize();

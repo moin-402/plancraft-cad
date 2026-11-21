@@ -2,6 +2,7 @@
 
 export const MM_PER_INCH = 25.4;
 export const MM_PER_FOOT = 304.8;
+const MM2_PER_SQFT = MM_PER_FOOT * MM_PER_FOOT;   // 92903.04
 
 // How many screen pixels one mm is at "100% zoom" (a CSS inch is 96 px).
 export const PX_PER_MM_AT_100 = 96 / MM_PER_INCH;
@@ -22,6 +23,11 @@ export function formatFeetInches(mm) {
   const fraction = num ? ` ${num}/${den}` : "";
 
   return `${sign}${feet}' ${inches}${fraction}"`;
+}
+
+// Area in square feet: 9290304 (mm2) -> "100.00 sq ft"
+export function formatArea(mm2) {
+  return `${(mm2 / MM2_PER_SQFT).toFixed(2)} sq ft`;
 }
 
 // Grid spacing label: 3048 -> 10'   76.2 -> 3"
@@ -68,4 +74,14 @@ export function parseLength(text) {
   }
 
   return null;
+}
+
+// "10 x 12"  or  "12'6\" x 10'"  ->  { w, h } in mm, or null.
+export function parseSize(text) {
+  const parts = String(text).trim().toLowerCase().split(/\s*[x×*,]\s*/);
+  if (parts.length !== 2) return null;
+  const w = parseLength(parts[0]);
+  const h = parseLength(parts[1]);
+  if (!w || !h || w <= 0 || h <= 0) return null;
+  return { w, h };
 }

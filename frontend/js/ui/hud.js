@@ -1,11 +1,22 @@
 const bar = document.getElementById("draw-hud");
 const info = document.getElementById("hud-info");
 const input = document.getElementById("length-input");
+const hint = document.getElementById("hud-hint");
+
+const DEFAULTS = {
+  placeholder: "Type length, Enter",
+  hint: `12'6" · 12 6 · 10 (feet) · 3500mm · Shift = straight · Esc = stop`,
+};
 
 // Typing again removes the red "bad input" highlight.
 input.addEventListener("input", () => input.classList.remove("error"));
 
-export function show() { bar.hidden = false; }
+// options: { placeholder, hint }. Tools that pass nothing get the line defaults.
+export function show(options = DEFAULTS) {
+  input.placeholder = options.placeholder;
+  hint.textContent = options.hint;
+  bar.hidden = false;
+}
 
 export function hide() {
   bar.hidden = true;

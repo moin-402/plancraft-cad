@@ -1,5 +1,6 @@
 import { chooseGridStep, buildGridPaths } from "./grid.js";
 import { paperWorldSize } from "../core/paper.js";
+import { moveEntity } from "../core/geometry.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -9,6 +10,38 @@ function make(tag, className) {
   return el;
 }
 
+// Build the SVG shape for one drawing object. This is where mm become pixels.
+function shape(e, vp, className) {
+  if (e.type === "line") {
+    const el = make("line", className);
+    el.setAttribute("x1", vp.worldToScreenX(e.x1));
+    el.setAttribute("y1", vp.worldToScreenY(e.y1));
+    el.setAttribute("x2", vp.worldToScreenX(e.x2));
+    el.setAttribute("y2", vp.worldToScreenY(e.y2));
+    return el;
+  }
+  if (e.type === "rect") {
+    const el = make("rect", className);
+    const minX = Math.min(e.x1, e.x2);
+    const maxX = Math.max(e.x1, e.x2);
+    const minY = Math.min(e.y1, e.y2);
+    const maxY = Math.max(e.y1, e.y2);
+    el.setAttribute("x", vp.worldToScreenX(minX));
+    el.setAttribute("y", vp.worldToScreenY(maxY));   // screen Y is flipped
+    el.setAttribute("width", (maxX - minX) * vp.scale);
+    el.setAttribute("height", (maxY - minY) * vp.scale);
+    return el;
+  }
+  if (e.type === "circle") {
+    const el = make("circle", className);
+    el.setAttribute("cx", vp.worldToScreenX(e.cx));
+    el.setAttribute("cy", vp.worldToScreenY(e.cy));
+    el.setAttribute("r", e.r * vp.scale);
+    return el;
+  }
+  return null;
+}
+
 export function createScene(svg) {
   const paper = make("rect", "paper");
   const gridMinor = make("path", "grid-minor");
@@ -16,15 +49,18 @@ export function createScene(svg) {
   const axisX = make("line", "axis-x");
   const axisY = make("line", "axis-y");
   const entityLayer = make("g", "entities");
-  const previewLine = make("line", "preview-line");
+  const previewLayer = make("g", "previews");
   const snapMarker = make("rect", "snap-marker");
 
   // Order = drawing order (later items appear on top).
-  svg.append(paper, gridMinor, gridMajor, axisX, axisY, entityLayer, previewLine, snapMarker);
+  svg.append(paper, gridMinor, gridMajor, axisX, axisY, entityLayer, previewLayer, snapMarker);
 
-  // entities: the drawing objects (mm). overlay: temporary things like the
-  // dashed preview line and the snap marker: { preview, snap }.
-  function render(viewport, paperKey, entities, overlay) {
+  // entities: the drawing objects (mm).
+  // overlay: temporary things { preview, snap, hoverId, dragOffset }.
+  // selectedIds: a Set of selected object ids.
+  function render(viewport, paperKey, entities, overlay, selectedIds) {
+    const ov = overlay || {};
+
     // Paper sheet
     const size = paperWorldSize(paperKey);
     if (size) {
@@ -52,33 +88,30 @@ export function createScene(svg) {
     axisX.setAttribute("y1", y0); axisX.setAttribute("y2", y0);
     axisX.setAttribute("x1", 0);  axisX.setAttribute("x2", viewport.width);
 
-    // Drawing objects: mm -> pixels happens here, only for display.
+    // Drawing objects. While dragging, selected ones are shown shifted;
+    // the stored data only changes when the mouse is released.
     const items = [];
     for (const e of entities) {
-      if (e.type !== "line") continue;
-      const el = make("line", "entity-line");
-      el.setAttribute("x1", viewport.worldToScreenX(e.x1));
-      el.setAttribute("y1", viewport.worldToScreenY(e.y1));
-      el.setAttribute("x2", viewport.worldToScreenX(e.x2));
-      el.setAttribute("y2", viewport.worldToScreenY(e.y2));
-      items.push(el);
+      const isSelected = selectedIds.has(e.id);
+      const shown = isSelected && ov.dragOffset
+        ? moveEntity(e, ov.dragOffset.dx, ov.dragOffset.dy)
+        : e;
+
+      let cls = "entity";
+      if (isSelected) cls += " selected";
+      else if (ov.hoverId === e.id) cls += " hover";
+
+      const el = shape(shown, viewport, cls);
+      if (el) items.push(el);
     }
     entityLayer.replaceChildren(...items);
 
-    // Dashed preview line while drawing
-    const pv = overlay && overlay.preview;
-    if (pv) {
-      previewLine.style.display = "";
-      previewLine.setAttribute("x1", viewport.worldToScreenX(pv.x1));
-      previewLine.setAttribute("y1", viewport.worldToScreenY(pv.y1));
-      previewLine.setAttribute("x2", viewport.worldToScreenX(pv.x2));
-      previewLine.setAttribute("y2", viewport.worldToScreenY(pv.y2));
-    } else {
-      previewLine.style.display = "none";
-    }
+    // Dashed preview of the object being drawn
+    const previewEl = ov.preview ? shape(ov.preview, viewport, "preview-shape") : null;
+    previewLayer.replaceChildren(...(previewEl ? [previewEl] : []));
 
     // Snap marker: bigger green square on an endpoint, small blue on the grid
-    const sn = overlay && overlay.snap;
+    const sn = ov.snap;
     if (sn) {
       const s = sn.kind === "endpoint" ? 12 : 6;
       snapMarker.style.display = "";

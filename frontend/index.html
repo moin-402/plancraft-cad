@@ -26,6 +26,7 @@
     <button class="tool active" data-tool="select">Select</button>
     <button class="tool" data-tool="line">Line</button>
     <button class="tool" data-tool="rectangle">Rect</button>
+    <button class="tool" data-tool="circle">Circle</button>
     <button class="tool" data-tool="wall">Wall</button>
     <button class="tool" data-tool="door">Door</button>
     <button class="tool" data-tool="window">Window</button>
@@ -40,13 +41,13 @@
       <span id="hud-info"></span>
       <input id="length-input" type="text" autocomplete="off" spellcheck="false"
              placeholder="Type length, Enter">
-      <span class="hud-hint">12'6" · 12 6 · 10 (feet) · 3500mm · Shift = straight · Esc = stop</span>
+      <span id="hud-hint" class="hud-hint"></span>
     </div>
   </main>
 
   <aside id="properties">
     <h2>Properties</h2>
-    <p class="muted">Nothing selected.</p>
+    <div id="props-selection"><p class="muted">Nothing selected.</p></div>
     <h3>Drawing</h3>
     <dl>
       <dt>Units</dt><dd>Feet &amp; inches</dd>
